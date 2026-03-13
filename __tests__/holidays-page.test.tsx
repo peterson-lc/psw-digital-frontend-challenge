@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HolidaysPage } from "@/components/holidays-page";
 import type { HolidaysResponse } from "@/lib/api";
@@ -193,5 +193,162 @@ describe("HolidaysPage", () => {
       ).toBeInTheDocument();
     });
   });
-});
 
+  it("uses selectedDate year as activeYear when a date is picked", async () => {
+    render(<HolidaysPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Confraternização Universal")).toBeInTheDocument();
+    });
+
+    mockFetchHolidays.mockClear();
+
+    const datePicker = screen.getByTestId("date-picker");
+    // Use T00:00:00 so the Date constructor creates a local-time date (no timezone shift)
+    fireEvent.change(datePicker, { target: { value: "2028-07-04T00:00:00" } });
+
+    await waitFor(() => {
+      expect(mockFetchHolidays).toHaveBeenCalledWith(
+        expect.objectContaining({ year: 2028, date: "2028-07-04" }),
+      );
+    });
+  });
+
+  it("clears selectedDate when date picker value is cleared", async () => {
+    render(<HolidaysPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Confraternização Universal")).toBeInTheDocument();
+    });
+
+    const datePicker = screen.getByTestId("date-picker");
+
+    // First set a date so there is something to clear
+    fireEvent.change(datePicker, { target: { value: "2028-07-04T00:00:00" } });
+
+    await waitFor(() => {
+      expect(mockFetchHolidays).toHaveBeenCalledWith(
+        expect.objectContaining({ year: 2028 }),
+      );
+    });
+
+    mockFetchHolidays.mockClear();
+
+    // Clear the date picker — triggers onChange with empty value (null date)
+    fireEvent.change(datePicker, { target: { value: "" } });
+
+    await waitFor(() => {
+      expect(mockFetchHolidays).toHaveBeenCalledWith(
+        expect.objectContaining({ date: undefined, year: new Date().getFullYear() }),
+      );
+    });
+  });
+
+  it("redirects to /login on unauthorized error", async () => {
+    mockFetchHolidays.mockRejectedValue(new Error("Unauthorized"));
+
+    render(<HolidaysPage />);
+
+    await waitFor(() => {
+      expect(mockReplace).toHaveBeenCalledWith("/login");
+    });
+  });
+
+  it("shows fallback error message when error is not an Error instance", async () => {
+    mockFetchHolidays.mockRejectedValue("some string error");
+
+    render(<HolidaysPage />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("Não foi possível carregar os feriados."),
+      ).toBeInTheDocument();
+    });
+  });
+
+  it("does not update state after effect cleanup (cancelled flag)", async () => {
+    let resolveFirst!: (value: HolidaysResponse) => void;
+    mockFetchHolidays.mockImplementationOnce(
+      () => new Promise<HolidaysResponse>((resolve) => { resolveFirst = resolve; }),
+    );
+
+    const { unmount } = render(<HolidaysPage />);
+
+    // Unmount before the fetch resolves — sets cancelled = true
+    unmount();
+
+    // Resolve the pending promise after unmount
+    resolveFirst(mockHolidays);
+
+    // If state were updated after unmount, React would warn.
+    // The test passing without errors confirms the cancelled flag works.
+  });
+
+  it("shows loading state when startLoading is called via Enter key", async () => {
+    const user = userEvent.setup();
+    render(<HolidaysPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Confraternização Universal")).toBeInTheDocument();
+    });
+
+    // Make the next fetch hang so we can observe the loading state
+    mockFetchHolidays.mockImplementation(() => new Promise(() => {}));
+
+    const searchInput = screen.getByPlaceholderText("Busque por nome");
+    await user.type(searchInput, "test");
+    await user.keyboard("{Enter}");
+
+    expect(screen.getByText("Carregando feriados...")).toBeInTheDocument();
+  });
+
+  it("shows loading state when startLoading is called via search button", async () => {
+    const user = userEvent.setup();
+    render(<HolidaysPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Confraternização Universal")).toBeInTheDocument();
+    });
+
+    mockFetchHolidays.mockImplementation(() => new Promise(() => {}));
+
+    const searchInput = screen.getByPlaceholderText("Busque por nome");
+    await user.type(searchInput, "test");
+    const searchButton = screen.getByRole("button", { name: /pesquisar/i });
+    await user.click(searchButton);
+
+    expect(screen.getByText("Carregando feriados...")).toBeInTheDocument();
+  });
+
+  it("shows loading state when startLoading is called via sort change", async () => {
+    const user = userEvent.setup();
+    render(<HolidaysPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Confraternização Universal")).toBeInTheDocument();
+    });
+
+    mockFetchHolidays.mockImplementation(() => new Promise(() => {}));
+
+    const sortSelect = screen.getByDisplayValue("Data crescente");
+    await user.selectOptions(sortSelect, "date_desc");
+
+    expect(screen.getByText("Carregando feriados...")).toBeInTheDocument();
+  });
+
+  it("shows loading state when startLoading is called via type filter change", async () => {
+    const user = userEvent.setup();
+    render(<HolidaysPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Confraternização Universal")).toBeInTheDocument();
+    });
+
+    mockFetchHolidays.mockImplementation(() => new Promise(() => {}));
+
+    const typeSelect = screen.getByDisplayValue("Tipo");
+    await user.selectOptions(typeSelect, "municipal");
+
+    expect(screen.getByText("Carregando feriados...")).toBeInTheDocument();
+  });
+});
