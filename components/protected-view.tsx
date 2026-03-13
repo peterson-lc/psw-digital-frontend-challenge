@@ -9,10 +9,10 @@ type ProtectedViewProps = {
 };
 
 function subscribe(onStoreChange: () => void) {
-  window.addEventListener("storage", onStoreChange);
+  globalThis.addEventListener("storage", onStoreChange);
 
   return () => {
-    window.removeEventListener("storage", onStoreChange);
+    globalThis.removeEventListener("storage", onStoreChange);
   };
 }
 
@@ -21,8 +21,8 @@ let cachedSession: StoredSession | null = null;
 
 function getSnapshot(): StoredSession | null {
   const raw =
-    typeof window !== "undefined"
-      ? window.localStorage.getItem("psw-digital-frontend-session")
+    typeof globalThis !== "undefined"
+      ? globalThis.localStorage?.getItem("psw-digital-frontend-session")
       : null;
 
   if (raw !== cachedRaw) {

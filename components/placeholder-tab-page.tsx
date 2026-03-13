@@ -3,9 +3,9 @@
 import { DashboardShell } from "@/components/dashboard-shell";
 import { ProtectedView } from "@/components/protected-view";
 
-type PlaceholderTabPageProps = {
+type PlaceholderTabPageProps = Readonly<{
   heading: string;
-};
+}>;
 
 export function PlaceholderTabPage({ heading }: PlaceholderTabPageProps) {
   return (

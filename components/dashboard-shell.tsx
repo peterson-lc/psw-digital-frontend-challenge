@@ -1,9 +1,9 @@
 import { ReactNode } from "react";
 import { DashboardTabs } from "@/components/dashboard-tabs";
 
-type DashboardShellProps = {
+type DashboardShellProps = Readonly<{
   children: ReactNode;
-};
+}>;
 
 export function DashboardShell({ children }: DashboardShellProps) {
   return (

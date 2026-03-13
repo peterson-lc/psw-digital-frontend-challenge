@@ -30,7 +30,7 @@ const TYPE_FILTER_VALUE: Record<string, number | undefined> = {
   municipal: 1,
 };
 
-function HolidaysContent({ session }: { session: StoredSession }) {
+function HolidaysContent({ session }: Readonly<{ session: StoredSession }>) {
   const router = useRouter();
   const [holidays, setHolidays] = useState<HolidayDto[]>([]);
   const [total, setTotal] = useState(0);
@@ -130,7 +130,7 @@ function HolidaysContent({ session }: { session: StoredSession }) {
           </span>
 
           <label className="flex items-center gap-3 text-xs font-medium uppercase tracking-[0.18em] text-[#5f5b56]">
-            Ordenar por
+            Ordenar por{" "}
             <select
               value={sortOption}
               onChange={(event) =>
@@ -201,14 +201,20 @@ function HolidaysContent({ session }: { session: StoredSession }) {
           <span />
         </div>
 
-        {isLoading ? (
-          <p className="px-6 py-10 text-sm text-[#7c7c85]">Carregando feriados...</p>
-        ) : error ? (
-          <p className="px-6 py-10 text-sm text-[#b42318]">{error}</p>
-        ) : holidays.length === 0 ? (
-          <p className="px-6 py-10 text-sm text-[#7c7c85]">Nenhum feriado encontrado.</p>
-        ) : (
-          holidays.map((holiday, index) => (
+        {(() => {
+          if (isLoading) {
+            return <p className="px-6 py-10 text-sm text-[#7c7c85]">Carregando feriados...</p>;
+          }
+
+          if (error) {
+            return <p className="px-6 py-10 text-sm text-[#b42318]">{error}</p>;
+          }
+
+          if (holidays.length === 0) {
+            return <p className="px-6 py-10 text-sm text-[#7c7c85]">Nenhum feriado encontrado.</p>;
+          }
+
+          return holidays.map((holiday, index) => (
             <div
               key={`${holiday.date}-${holiday.name}-${index}`}
               className="grid grid-cols-[minmax(0,1.2fr)_140px_140px_32px] gap-4 border-b border-[#f1eeea] px-6 py-7 text-sm text-[#3f3f46] last:border-b-0"
@@ -224,8 +230,8 @@ function HolidaysContent({ session }: { session: StoredSession }) {
               </span>
               <span className="flex items-center justify-end text-[#8b8b94]">›</span>
             </div>
-          ))
-        )}
+          ));
+        })()}
       </div>
     </section>
   );

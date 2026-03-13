@@ -6,11 +6,11 @@ export type StoredSession = {
 const STORAGE_KEY = "psw-digital-frontend-session";
 
 export function getStoredSession(): StoredSession | null {
-  if (typeof window === "undefined") {
+  if (typeof globalThis === "undefined") {
     return null;
   }
 
-  const session = window.localStorage.getItem(STORAGE_KEY);
+  const session = globalThis.localStorage?.getItem(STORAGE_KEY);
 
   if (!session) {
     return null;
@@ -19,15 +19,15 @@ export function getStoredSession(): StoredSession | null {
   try {
     return JSON.parse(session) as StoredSession;
   } catch {
-    window.localStorage.removeItem(STORAGE_KEY);
+    globalThis.localStorage.removeItem(STORAGE_KEY);
     return null;
   }
 }
 
 export function saveStoredSession(session: StoredSession) {
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+  globalThis.localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
 }
 
 export function clearStoredSession() {
-  window.localStorage.removeItem(STORAGE_KEY);
+  globalThis.localStorage.removeItem(STORAGE_KEY);
 }
