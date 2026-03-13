@@ -57,5 +57,34 @@ describe("ProtectedView", () => {
     expect(screen.getByText("Carregando...")).toBeInTheDocument();
     expect(mockReplace).toHaveBeenCalledWith("/login");
   });
+
+  it("re-renders correctly when session changes in localStorage", () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ token: "token-a", expiration: null }),
+    );
+
+    const { rerender } = render(
+      <ProtectedView>
+        {(session) => <div>Welcome {session.token}</div>}
+      </ProtectedView>,
+    );
+
+    expect(screen.getByText("Welcome token-a")).toBeInTheDocument();
+
+    // Update localStorage and re-render to exercise the cached-raw path
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ token: "token-b", expiration: null }),
+    );
+
+    rerender(
+      <ProtectedView>
+        {(session) => <div>Welcome {session.token}</div>}
+      </ProtectedView>,
+    );
+
+    expect(screen.getByText("Welcome token-b")).toBeInTheDocument();
+  });
 });
 

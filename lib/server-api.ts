@@ -1,3 +1,4 @@
+import { NextResponse } from "next/server";
 import https from "node:https";
 
 const API_BASE_URL = (
@@ -9,9 +10,9 @@ const API_BASE_URL = (
  * can reach a local backend served over HTTPS with a dev certificate.
  */
 const devAgent =
-  process.env.NODE_ENV !== "production"
-    ? new https.Agent({ rejectUnauthorized: false })
-    : undefined;
+  process.env.NODE_ENV === "production"
+    ? undefined
+    : new https.Agent({ rejectUnauthorized: false });
 
 export function buildBackendUrl(path: string) {
   if (!API_BASE_URL) {
@@ -54,5 +55,34 @@ export async function backendFetch(
         process.env.NODE_TLS_REJECT_UNAUTHORIZED = prevTls;
       }
     }
+  }
+}
+
+/**
+ * Forwards a backend response back to the client, or returns a
+ * standardised JSON error when the backend call throws.
+ */
+export async function proxyToBackend(
+  url: string,
+  init: RequestInit,
+  fallbackErrorMessage: string,
+): Promise<Response> {
+  try {
+    const response = await backendFetch(url, { ...init, cache: "no-store" });
+    const contentType = response.headers.get("content-type") ?? "application/json";
+    const payload = await response.text();
+
+    return new Response(payload, {
+      status: response.status,
+      headers: { "Content-Type": contentType },
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : fallbackErrorMessage;
+
+    return NextResponse.json(
+      { succeeded: false, messages: [message] },
+      { status: 500 },
+    );
   }
 }
