@@ -46,11 +46,13 @@ function HolidaysContent({ session }: Readonly<{ session: StoredSession }>) {
     ? Number(selectedDate.slice(0, 4))
     : new Date().getFullYear();
 
-  useEffect(() => {
-    let cancelled = false;
-
+  function startLoading() {
     setIsLoading(true);
     setError(null);
+  }
+
+  useEffect(() => {
+    let cancelled = false;
 
     fetchHolidays({
       token: session.token,
@@ -64,6 +66,8 @@ function HolidaysContent({ session }: Readonly<{ session: StoredSession }>) {
         if (!cancelled) {
           setHolidays(response.holidays ?? []);
           setTotal(response.total ?? 0);
+          setError(null);
+          setIsLoading(false);
         }
       })
       .catch((requestError) => {
@@ -81,11 +85,7 @@ function HolidaysContent({ session }: Readonly<{ session: StoredSession }>) {
         }
 
         setError(message);
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
+        setIsLoading(false);
       });
 
     return () => {
@@ -104,6 +104,7 @@ function HolidaysContent({ session }: Readonly<{ session: StoredSession }>) {
             onChange={(event) => setSearchDraft(event.target.value)}
             onKeyDown={(event) => {
               if (event.key === "Enter") {
+                startLoading();
                 setSearchQuery(searchDraft);
               }
             }}
@@ -115,7 +116,7 @@ function HolidaysContent({ session }: Readonly<{ session: StoredSession }>) {
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-end">
           <button
             type="button"
-            onClick={() => setSearchQuery(searchDraft)}
+            onClick={() => { startLoading(); setSearchQuery(searchDraft); }}
             className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#1017a8] text-white transition hover:bg-[#0a1085]"
             aria-label="Pesquisar por nome"
           >
@@ -133,9 +134,10 @@ function HolidaysContent({ session }: Readonly<{ session: StoredSession }>) {
             Ordenar por{" "}
             <select
               value={sortOption}
-              onChange={(event) =>
-                setSortOption(event.target.value as SortOption)
-              }
+              onChange={(event) => {
+                startLoading();
+                setSortOption(event.target.value as SortOption);
+              }}
               className="rounded-full border border-transparent bg-transparent px-2 py-1 text-xs text-[#111827] outline-none"
             >
               <option value="date_asc">Data crescente</option>
@@ -152,9 +154,10 @@ function HolidaysContent({ session }: Readonly<{ session: StoredSession }>) {
           <span className="sr-only">Filtrar por tipo</span>
           <select
             value={typeFilter}
-            onChange={(event) =>
-              setTypeFilter(event.target.value as HolidayTypeFilter)
-            }
+            onChange={(event) => {
+              startLoading();
+              setTypeFilter(event.target.value as HolidayTypeFilter);
+            }}
             className="h-11 min-w-28 appearance-none rounded-full border border-[#1f2937] bg-white px-5 pr-10 text-sm text-[#111827] outline-none"
           >
             <option value="all">Tipo</option>
@@ -176,6 +179,7 @@ function HolidaysContent({ session }: Readonly<{ session: StoredSession }>) {
           <DatePicker
             selected={selectedDate ? new Date(selectedDate + "T00:00:00") : null}
             onChange={(date: Date | null) => {
+              startLoading();
               if (date) {
                 const yyyy = date.getFullYear();
                 const mm = String(date.getMonth() + 1).padStart(2, "0");
